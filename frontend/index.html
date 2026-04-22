@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Kiosk Access</title>
+    <link rel="stylesheet" href="/frontend/index.css">
+</head>
+<body> 
+
+    <div class="video-container">
+        <video id="webcam" autoplay playsinline></video>
+    </div>
+
+    <div class="interface-overlay">
+        <h2>BIG DATA TECH ATTENDANCE</h2>
+
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <p id="status">System Online</p>
+            <button id="captureBtn">Verify Identity</button>
+            
+            <div class="nav-container">
+                <a href="/frontend/dashboard.html" class="nav-link" style="margin-top: 20px;">System Administration</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="kiosk-footer">
+        <div class="footer-info">
+            <span id="live-clock">Loading System Time...</span>
+            <span class="divider">|</span>
+            <span id="current-date"></span>
+        </div>
+        <div class="system-status">
+            <span class="status-dot"></span> SECURE TERMINAL ACTIVE
+        </div>
+    </footer>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+    <script src="/frontend/webcam.js"></script>
+
+</body>
+</html>

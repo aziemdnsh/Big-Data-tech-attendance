@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register New User</title>
+    <link rel="stylesheet" href="/frontend/register.css">
+    <script>
+    async function checkAccess() {
+        try {
+            // We call the session check endpoint we created in app.py
+            const response = await fetch('/verify-session');
+            
+            if (response.status !== 200) {
+                // If not authorized (401), jump to login immediately
+                window.location.href = "/frontend/login.html";
+            }
+        } catch (error) {
+            // If the server is down or network fails
+            window.location.href = "/frontend/login.html";
+        }
+    }
+    // Execute the lock immediately
+    checkAccess();
+</script>
+</head>
+<body>
+    <div class="register-container">
+        <header>
+            <h2>Register Face</h2>
+            <p class="header-subtitle">Capture your face for attendance</p>
+        </header>
+
+        <main>
+            <div class="video-container">
+                <video id="webcam" autoplay playsinline></video>
+            </div>
+
+            <input type="text" id="userName" placeholder="Enter Full Name" 
+                   aria-label="Full Name input">
+
+            <button id="registerBtn">Capture & Register</button>
+
+            <p id="status">Status: Ready</p>
+        </main>
+
+        <footer class="nav-link-container">
+            
+            <a href="/frontend/dashboard.html" class="nav-link">Go to Dashboard</a>
+            <a href="/" class="nav-link">Back to Attendance</a>
+        </footer>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <script src="/frontend/register.js"></script>
+</body>
+</html>

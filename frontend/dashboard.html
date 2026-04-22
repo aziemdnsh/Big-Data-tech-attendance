@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Dashboard | BigData@5G</title>
+    <link rel="stylesheet" href="/frontend/dashboard.css">
+    <script>
+        async function preCheck() {
+            const res = await fetch('/verify-session');
+            if (res.status !== 200) window.location.href = "/frontend/login.html";
+        }
+        preCheck();
+    </script>
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <header class="dashboard-header">
+            <div class="brand">
+                <h2>Intelligence Terminal</h2>
+                <p>Real-time Attendance Analytics</p>
+            </div>
+            <nav class="admin-nav">
+                <a href="/frontend/register.html" class="nav-btn">Enroll New Face</a>
+                <button id="logoutBtn" class="nav-btn logout">Secure Exit</button>
+            </nav>
+        </header>
+
+        <main class="log-section">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subject Name</th>
+                            <th>Timestamp</th>
+                            <th>Location Status</th>
+                            <th>Verification</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-rows">
+                        </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="/frontend/dashboard.js"></script>
+</body>
+</html>
