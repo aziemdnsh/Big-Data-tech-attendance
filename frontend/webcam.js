@@ -80,8 +80,16 @@ button.addEventListener("click", async () => {
             statusText.style.color = "#ff4d4d"; // Error Red
         } else {
             // NEW: Logic to handle IN/OUT toggle feedback
-            const actionColor = data.action === "IN" ? "#4CAF50" : "#d4af37"; // Green for IN, Gold for OUT
-            const actionText = data.action === "IN" ? "CHECKED-IN" : "CHECKED-OUT";
+            let actionColor = "#d4af37"; // Default Gold for OUT
+            let actionText = "CHECKED-OUT";
+            
+            if (data.action === "IN") {
+                actionColor = "#4CAF50"; // Green for on-time IN
+                actionText = "CHECKED-IN";
+            } else if (data.action === "IN (LATE)") {
+                actionColor = "#ff9800"; // Orange for LATE IN
+                actionText = "CHECKED-IN (LATE)";
+            }
             
             statusText.innerHTML = `✅ ${data.name} <br> <span style="color: ${actionColor}; font-size: 0.8em;">${actionText}</span>`;
             

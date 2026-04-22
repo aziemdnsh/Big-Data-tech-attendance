@@ -27,6 +27,16 @@
         </header>
 
         <main class="log-section">
+            <div class="download-section">
+                <h3>Export Attendance Report</h3>
+                <form id="download-form">
+                    <select id="month-select" name="month"></select>
+                    <select id="year-select" name="year"></select>
+                    <button type="submit" class="nav-btn">Generate Excel</button>
+                </form>
+                <p id="download-error"></p>
+            </div>
+
             <div class="table-container">
                 <table>
                     <thead>

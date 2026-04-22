@@ -1,6 +1,7 @@
 // frontend/dashboard.js
 document.addEventListener('DOMContentLoaded', () => {
     loadAttendanceLogs();
+    setupDownloadForm();
     
     document.getElementById('logoutBtn').addEventListener('click', () => {
         // Clear the session cookie by setting expiry to the past
@@ -8,6 +9,86 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = "/frontend/login.html";
     });
 });
+
+function setupDownloadForm() {
+    const monthSelect = document.getElementById('month-select');
+    const yearSelect = document.getElementById('year-select');
+    const downloadForm = document.getElementById('download-form');
+    const downloadError = document.getElementById('download-error');
+
+    if (!monthSelect || !yearSelect || !downloadForm || !downloadError) {
+        console.warn("Download form elements not found in dashboard.html. Skipping download form setup.");
+        return;
+    }
+
+    // Populate months
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    months.forEach((month, index) => {
+        const option = document.createElement('option');
+        option.value = index + 1;
+        option.textContent = month;
+        monthSelect.appendChild(option);
+    });
+
+    // Populate years (current year + last 4 years)
+    const currentYear = new Date().getFullYear();
+    for (let i = 0; i < 5; i++) {
+        const year = currentYear - i;
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+    }
+
+    // Set current month and year as default
+    const currentDate = new Date();
+    monthSelect.value = currentDate.getMonth() + 1;
+    yearSelect.value = currentDate.getFullYear();
+
+    downloadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        downloadError.textContent = '';
+
+        const year = yearSelect.value;
+        const month = monthSelect.value;
+        const url = `/download-attendance?year=${year}&month=${month}`;
+        const submitButton = downloadForm.querySelector('button');
+
+        try {
+            submitButton.textContent = 'Downloading...';
+            submitButton.disabled = true;
+
+            const response = await fetch(url);
+
+            if (response.status === 401) {
+                window.location.href = "/frontend/login.html";
+                return;
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to download file.');
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = downloadUrl;
+            a.download = `attendance_${year}_${String(month).padStart(2, '0')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(downloadUrl);
+            a.remove();
+        } catch (error) {
+            console.error('Download failed:', error);
+            downloadError.textContent = `Error: ${error.message}`;
+        } finally {
+            submitButton.textContent = 'Download Excel';
+            submitButton.disabled = false;
+        }
+    });
+}
 
 async function loadAttendanceLogs() {
     const tbody = document.getElementById('attendance-rows');
@@ -31,7 +112,10 @@ async function loadAttendanceLogs() {
 
             // Map data into rows
             tbody.innerHTML = data.logs.map(log => {
-                const statusClass = log.status === "IN" ? "status-in" : "status-out";
+                let statusClass = "status-out";
+                if (log.status === "IN") statusClass = "status-in";
+                else if (log.status === "IN (LATE)") statusClass = "status-late";
+                
                 return `
                     <tr>
                         <td>${log.name}</td>

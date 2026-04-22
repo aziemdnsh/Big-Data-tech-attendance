@@ -46,19 +46,27 @@ class FaceDatabase:
                 users[name] = np.load(io.BytesIO(emb_bytes))
             return users
 
-    # NEW: Function to save a new attendance record
-    def log_attendance(self, name, status="VERIFIED"):
-        with sqlite3.connect(self.db_path) as conn:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            conn.execute("INSERT INTO attendance_logs (name, timestamp, status) VALUES (?, ?, ?)", 
-                         (name, now, status))
-
     # Updated: Now matches the columns created in init_db
     def get_attendance_logs(self):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute("SELECT name, timestamp, status FROM attendance_logs ORDER BY timestamp DESC")
             return [{"name": row[0], "time": row[1], "status": row[2]} for row in cursor.fetchall()]
         
+    def get_attendance_logs_for_month(self, year: int, month: int):
+        """Fetches attendance logs for a specific year and month."""
+        with sqlite3.connect(self.db_path) as conn:
+            query = """
+                SELECT name, timestamp, status 
+                FROM attendance_logs 
+                WHERE strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
+                ORDER BY timestamp DESC
+            """
+            year_str = str(year)
+            month_str = f"{month:02d}"
+            
+            cursor = conn.execute(query, (year_str, month_str))
+            return [{"name": row[0], "time": row[1], "status": row[2]} for row in cursor.fetchall()]
+
     def get_last_status(self, name):
         """Checks the most recent log for a specific user."""
         with sqlite3.connect(self.db_path) as conn:
@@ -80,12 +88,20 @@ class FaceDatabase:
         next_status = self.get_last_status(name)
         
         # 2. Get current time
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_dt = datetime.now()
+        now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         
-        # 3. Save the new status
+        # 3. Check for lateness (assuming 09:00 AM is the cutoff)
+        actual_status = next_status
+        if next_status == "IN":
+            cutoff_time = now_dt.replace(hour=9, minute=0, second=0, microsecond=0)
+            if now_dt > cutoff_time:
+                actual_status = "IN (LATE)"
+        
+        # 4. Save the new status
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 "INSERT INTO attendance_logs (name, timestamp, status) VALUES (?, ?, ?)", 
-                (name, now, next_status)
+                (name, now_str, actual_status)
             )
-        return next_status
+        return actual_status

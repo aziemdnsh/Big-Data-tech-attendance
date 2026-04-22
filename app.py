@@ -4,18 +4,20 @@ import numpy as np
 import cv2
 import os
 import socket
+import io
 import secrets
+import pandas as pd
 from utils.face_detector import FaceDetector
 from utils.face_embedder import FaceEmbedder
 from utils.antispoof import AntiSpoof
 from utils.liveness import LivenessDetector
 from fastapi.middleware.cors import CORSMiddleware  
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from database import FaceDatabase
 from scipy.spatial.distance import cosine
 from datetime import datetime, timedelta
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException,Request, Response ,Cookie, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Response, Cookie, Depends
 from typing import Optional
 
 # Configuration
@@ -222,6 +224,48 @@ async def get_attendance(admin_session: Optional[str] = Cookie(None)):
     
     logs = db.get_attendance_logs()
     return {"success": True, "logs": logs}
+
+@app.get("/download-attendance")
+async def download_attendance(
+    year: int,
+    month: int,
+    admin_session: Optional[str] = Cookie(None)
+):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    logs = db.get_attendance_logs_for_month(year, month)
+
+    if not logs:
+        raise HTTPException(status_code=404, detail=f"No attendance data found for {year}-{month:02d}.")
+
+    df = pd.DataFrame(logs)
+    df.rename(columns={'name': 'Name', 'time': 'Timestamp', 'status': 'Status'}, inplace=True)
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Attendance')
+        worksheet = writer.sheets['Attendance']
+        # Auto-adjust column widths for better readability
+        for idx, col in enumerate(df):
+            series = df[col]
+            # Handle empty series and find max length
+            max_len = max((
+                series.astype(str).map(len).max() or 0,
+                len(str(series.name))
+            )) + 2
+            worksheet.set_column(idx, idx, max_len)
+
+    output.seek(0)
+
+    filename = f"attendance_{year}_{month:02d}.xlsx"
+    headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+
+    return StreamingResponse(
+        output,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers=headers
+    )
 
 @app.get("/")
 async def read_index():

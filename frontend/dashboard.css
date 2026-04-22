@@ -108,3 +108,72 @@ td {
     border: 1px solid #ff4d4d;
     font-size: 11px;
 }
+
+.status-late {
+    background: rgba(255, 152, 0, 0.2);
+    color: #ff9800;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid #ff9800;
+    font-size: 11px;
+}
+
+/* Download Section Styling */
+.download-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.download-section h3 {
+    margin: 0;
+    color: #d4af37;
+    font-weight: normal;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 1.1rem;
+}
+
+#download-form {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#download-form select {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+/* Override .nav-btn for this specific form */
+#download-form .nav-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    background: transparent;
+    color: #d4af37;
+    border: 1px solid #d4af37;
+    margin-left: 0;
+}
+
+#download-form .nav-btn:hover {
+    color: #000; /* Better contrast on gold background */
+}
+
+#download-error {
+    color: #ff4d4d;
+    margin: 0;
+    font-size: 0.9rem;
+    min-height: 1em; /* Prevent layout shift when error appears */
+}
