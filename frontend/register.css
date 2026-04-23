@@ -136,6 +136,7 @@ input[type="text"]:focus {
         border: none;
         background: transparent;
         box-shadow: none;
+        box-sizing: border-box;
     }
     
     header h2 {

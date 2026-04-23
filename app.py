@@ -63,7 +63,7 @@ async def network_gatekeeper(request: Request, call_next):
     if client_ip != ALLOWED_PUBLIC_IP:
         # Check if it's a local IP from a different network
         # If you want to be EXTREMELY strict, remove the 'startswith' check below
-        if not client_ip.startswith("192.168.0."): 
+        if not client_ip.startswith("192.168.") and not client_ip.startswith("10.") and not client_ip.startswith("172."): 
             raise HTTPException(
                 status_code=403, 
                 detail="FORBIDDEN: Unauthorized Network. Please connect to BigData@5G."

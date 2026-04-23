@@ -106,3 +106,18 @@ input:focus {
 .back-link:hover {
     color: #fff;
 }
+
+/* =========================================
+   MOBILE RESPONSIVENESS (PHONES)
+   ========================================= */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 30px 20px;
+        width: 90%;
+        box-sizing: border-box;
+    }
+    
+    h2 {
+        font-size: 20px;
+    }
+}

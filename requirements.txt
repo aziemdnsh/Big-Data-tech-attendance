@@ -1,0 +1,9 @@
+numpy
+opencv-python
+mediapipe
+fastapi
+uvicorn
+python-multipart
+pandas
+xlsxwriter
+scipy

@@ -40,7 +40,7 @@ h2 {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 4px;
-    overflow: hidden;
+    overflow-x: auto;
 }
 
 table {
@@ -176,4 +176,48 @@ td {
     margin: 0;
     font-size: 0.9rem;
     min-height: 1em; /* Prevent layout shift when error appears */
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS (PHONES & TABLETS)
+   ========================================= */
+@media (max-width: 768px) {
+    .dashboard-wrapper {
+        padding: 15px; /* Reduce padding on small screens */
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .admin-nav {
+        display: flex;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .nav-btn {
+        margin-left: 0;
+        flex: 1; /* Make top navigation buttons equal width */
+        text-align: center;
+        padding: 12px 10px;
+        font-size: 11px;
+    }
+
+    table {
+        min-width: 600px; /* Forces horizontal scrolling instead of squishing text */
+    }
+
+    #download-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #download-form select,
+    #download-form .nav-btn {
+        width: 100%;
+        box-sizing: border-box;
+    }
 }
