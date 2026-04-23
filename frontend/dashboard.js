@@ -116,12 +116,17 @@ async function loadAttendanceLogs() {
                 if (log.status === "IN") statusClass = "status-in";
                 else if (log.status === "IN (LATE)") statusClass = "status-late";
                 
+                let actionHtml = '<span style="color: #d4af37">SECURE-MATCH</span>';
+                if (log.status === "IN (LATE)" && log.email && log.email !== "No Email") {
+                    actionHtml = `<button onclick="sendWarningEmail('${log.name}', '${log.email}', '${log.time}', this)" class="nav-btn" style="background: rgba(255, 77, 77, 0.8); color: #fff; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 10px;">SEND WARNING EMAIL</button>`;
+                }
+
                 return `
                     <tr>
-                        <td>${log.name}</td>
+                        <td>${log.name}<br><span style="font-size: 11px; color: rgba(255,255,255,0.5);">${log.email || "No Email"}</span></td>
                         <td>${log.time}</td>
                         <td><span class="${statusClass}">${log.status}</span></td>
-                        <td style="color: #d4af37">SECURE-MATCH</td>
+                        <td>${actionHtml}</td>
                     </tr>
                 `;
             }).join('');
@@ -129,5 +134,38 @@ async function loadAttendanceLogs() {
     } catch (err) {
         console.error("Dashboard Error:", err);
         tbody.innerHTML = '<tr><td colspan="4" style="color: #ff4d4d; text-align:center;">CRITICAL ERROR RETRIEVING DATA</td></tr>';
+    }
+}
+
+// Function to trigger the backend email sending
+async function sendWarningEmail(name, email, time, buttonElement) {
+    const originalText = buttonElement.textContent;
+    buttonElement.textContent = "SENDING...";
+    buttonElement.disabled = true;
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("time", time);
+
+    try {
+        const res = await fetch("/send-warning", {
+            method: "POST",
+            body: formData
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            buttonElement.textContent = "SENT ✅";
+            buttonElement.style.background = "#4CAF50"; // Turn green
+        } else {
+            alert("Failed to send email: " + data.error);
+            buttonElement.textContent = originalText;
+            buttonElement.disabled = false;
+        }
+    } catch (err) {
+        alert("Network error while sending email.");
+        buttonElement.textContent = originalText;
+        buttonElement.disabled = false;
     }
 }

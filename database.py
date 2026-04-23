@@ -12,7 +12,19 @@ class FaceDatabase:
         with sqlite3.connect(self.db_path) as conn:
             # 1. Face Data Table
             conn.execute('''CREATE TABLE IF NOT EXISTS users 
-                          (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, embedding BLOB)''')
+                          (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, embedding BLOB)''')
+            
+            # Migration: add email column to existing databases safely
+            try:
+                conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
+            except sqlite3.OperationalError:
+                pass # Column already exists
+            
+            # Migration: add department column to existing databases safely
+            try:
+                conn.execute("ALTER TABLE users ADD COLUMN department TEXT")
+            except sqlite3.OperationalError:
+                pass # Column already exists
             
             # 2. Admin Table
             conn.execute('''CREATE TABLE IF NOT EXISTS admins 
@@ -31,12 +43,12 @@ class FaceDatabase:
                                  (username, password))
             return cursor.fetchone() is not None
 
-    def register_user(self, name, embedding):
+    def register_user(self, name, email, department, embedding):
         out = io.BytesIO()
         np.save(out, embedding)
         embedding_bytes = out.getvalue()
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("INSERT INTO users (name, embedding) VALUES (?, ?)", (name, embedding_bytes))
+            conn.execute("INSERT INTO users (name, email, department, embedding) VALUES (?, ?, ?, ?)", (name, email, department, embedding_bytes))
 
     def get_all_users(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -46,11 +58,34 @@ class FaceDatabase:
                 users[name] = np.load(io.BytesIO(emb_bytes))
             return users
 
+    def get_all_users_details(self):
+        """Fetches detailed info for staff management"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("SELECT id, name, email, department FROM users")
+            return [{"id": row[0], "name": row[1], "email": row[2] or "", "department": row[3] or ""} for row in cursor.fetchall()]
+
+    def delete_user(self, user_id: int):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+    def update_user(self, user_id: int, name: str, email: str, department: str):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "UPDATE users SET name = ?, email = ?, department = ? WHERE id = ?", 
+                (name, email, department, user_id)
+            )
+
     # Updated: Now matches the columns created in init_db
     def get_attendance_logs(self):
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("SELECT name, timestamp, status FROM attendance_logs ORDER BY timestamp DESC")
-            return [{"name": row[0], "time": row[1], "status": row[2]} for row in cursor.fetchall()]
+            # Join with users to pull their email addresses
+            cursor = conn.execute("""
+                SELECT a.name, a.timestamp, a.status, u.email 
+                FROM attendance_logs a
+                LEFT JOIN users u ON a.name = u.name
+                ORDER BY a.timestamp DESC
+            """)
+            return [{"name": row[0], "time": row[1], "status": row[2], "email": row[3] or "No Email"} for row in cursor.fetchall()]
         
     def get_attendance_logs_for_month(self, year: int, month: int):
         """Fetches attendance logs for a specific year and month."""

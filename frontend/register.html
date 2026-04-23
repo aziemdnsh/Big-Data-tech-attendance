@@ -25,6 +25,15 @@
 </script>
 </head>
 <body>
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="/frontend/dashboard.html" class="nav-link">Go to Dashboard</a>
+        </div>
+        <div class="nav-right">
+            <a href="/frontend/index.html" class="nav-link">Back to Attendance</a>
+        </div>
+    </nav>
+    <div class="layout-wrapper">
     <div class="register-container">
         <header>
             <h2>Register Face</h2>
@@ -38,20 +47,55 @@
 
             <input type="text" id="userName" placeholder="Enter Full Name" 
                    aria-label="Full Name input">
+            <input type="email" id="userEmail" placeholder="Enter Email Address" 
+                   aria-label="Email input">
+            <input type="text" id="userDept" placeholder="Enter Department" 
+                   aria-label="Department input">
 
             <button id="registerBtn">Capture & Register</button>
 
             <p id="status">Status: Ready</p>
         </main>
+    </div>
 
-        <footer class="nav-link-container">
-            
-            <a href="/frontend/dashboard.html" class="nav-link">Go to Dashboard</a>
-            <a href="/" class="nav-link">Back to Attendance</a>
-        </footer>
+    <!-- Staff Management List beside the register-container -->
+    <div class="staff-management-card">
+        <h3>Registered Staff</h3>
+        <div class="staff-table-container">
+            <table class="staff-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Dept</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="staffTableBody">
+                    <!-- JavaScript Dynamic Population -->
+                </tbody>
+            </table>
+        </div>
+    </div>
     </div>
 
     <canvas id="canvas"></canvas>
+    
+    <!-- Edit Modal -->
+    <div id="editUserModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3>Edit Staff</h3>
+            <input type="hidden" id="editUserId">
+            <input type="text" id="editUserName" placeholder="Full Name" class="modal-input">
+            <input type="email" id="editUserEmail" placeholder="Email Address" class="modal-input">
+            <input type="text" id="editUserDept" placeholder="Department" class="modal-input">
+            <div class="modal-actions">
+                <button onclick="closeModal()" class="modal-btn-cancel">Cancel</button>
+                <button onclick="submitEdit()" class="modal-btn-save">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/frontend/register.js"></script>
 </body>
 </html>

@@ -19,6 +19,8 @@ from scipy.spatial.distance import cosine
 from datetime import datetime, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Response, Cookie, Depends
 from typing import Optional
+import smtplib
+from email.mime.text import MIMEText
 
 # Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
@@ -184,6 +186,8 @@ async def login(response: Response, username: str = Form(...), password: str = F
 @app.post("/register")
 async def register(
     name: str = Form(...), 
+    email: str = Form(...),
+    department: str = Form(...),
     file: UploadFile = File(...),
     admin_session: Optional[str] = Cookie(None) # FastAPI automatically checks cookies
 ):
@@ -207,10 +211,72 @@ async def register(
 
     # 3. Save to SQLite
     try:
-        db.register_user(name, emb)
+        db.register_user(name, email, department, emb)
         return {"success": True, "message": f"{name} registered successfully!"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+@app.post("/send-warning")
+async def send_warning(
+    name: str = Form(...),
+    email: str = Form(...),
+    time: str = Form(...),
+    admin_session: Optional[str] = Cookie(None)
+):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Admin access required")
+    
+    # --- EMAIL CONFIGURATION ---
+    SMTP_SERVER = "smtp.gmail.com"
+    SMTP_PORT = 587
+    SENDER_EMAIL = "your_email@gmail.com" 
+    SENDER_PASSWORD = "your_app_password" 
+    
+    subject = "Late Arrival Warning"
+    body = f"Dear {name},\n\nThis is a formal warning regarding your late arrival recorded at {time}.\n\nPlease ensure you arrive on time in the future.\n\nManagement"
+    
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = email
+
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        return {"success": True, "message": "Warning email sent successfully!"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/users")
+async def get_users(admin_session: Optional[str] = Cookie(None)):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return {"success": True, "users": db.get_all_users_details()}
+
+@app.delete("/api/users/{user_id}")
+async def delete_user(user_id: int, admin_session: Optional[str] = Cookie(None)):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    db.delete_user(user_id)
+    return {"success": True}
+
+@app.put("/api/users/{user_id}")
+async def update_user(
+    user_id: int, 
+    name: str = Form(...), 
+    email: str = Form(...), 
+    department: str = Form(...), 
+    admin_session: Optional[str] = Cookie(None)
+):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    db.update_user(user_id, name, email, department)
+    return {"success": True}
+
 
 # ————— FRONTEND SERVING —————
 
