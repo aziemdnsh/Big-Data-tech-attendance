@@ -7,3 +7,5 @@ python-multipart
 pandas
 xlsxwriter
 scipy
+gunicorn
+Flask
