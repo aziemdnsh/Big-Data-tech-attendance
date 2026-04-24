@@ -128,7 +128,7 @@ async def recognize(
         return {"success": False, "error": "Face crop failed"}
 
     # --- STEP 4: Anti-spoof & Liveness Checks ---
-    if not spoof.check(face):
+    if not spoof.check(image, (x1, y1, x2, y2)):
         return {"success": False, "error": "Spoof detected (Static Photo/Screen)"}
 
     if not liveness.check(face):

@@ -105,18 +105,18 @@ class FaceDatabase:
     def get_last_status(self, name):
         """Checks the most recent log for a specific user."""
         with sqlite3.connect(self.db_path) as conn:
-        # We MUST filter by 'name' to get THAT person's last move
+            # We MUST filter by 'name' to get THAT person's last move
             cursor = conn.execute(
-            "SELECT status FROM attendance_logs WHERE name = ? ORDER BY timestamp DESC LIMIT 1", 
-            (name,)
+                "SELECT status FROM attendance_logs WHERE name = ? ORDER BY timestamp DESC LIMIT 1", 
+                (name,)
             )
-        row = cursor.fetchone()
-        
-        # If no history exists, or they last checked OUT, they are now coming IN
-        if row is None or row[0] == "OUT":
-            return "IN"
-        # If they were already IN, they are now going OUT
-        return "OUT"
+            row = cursor.fetchone()
+            
+            # If no history exists, or they last checked OUT, they are now coming IN
+            if row is None or row[0] == "OUT":
+                return "IN"
+            # If they were already IN, they are now going OUT
+            return "OUT"
 
     def log_attendance(self, name):
         # 1. Determine if this is an IN or OUT move
