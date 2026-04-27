@@ -161,7 +161,7 @@ async def recognize(
     if highest_sim < threshold:
         return {"success": False, "error": "Face not recognized in system"}
     
-    if highest_sim > 0.45:
+    if highest_sim >= threshold:
        current_action = db.log_attendance(best_name)
     else:
        current_action = None

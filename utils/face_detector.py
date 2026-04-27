@@ -6,8 +6,9 @@ from mediapipe.tasks.python import vision
 
 class FaceDetector:
     def __init__(self, min_confidence=0.7):
-        # Explicit absolute path
-        model_path = r"D:\face_recognition_project\models\blaze_face_short_range.tflite"
+        # Dynamic absolute path based on the current file location
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(os.path.dirname(current_dir), "models", "blaze_face_short_range.tflite")
         
         if not os.path.exists(model_path):
             print(f"ERROR: Model not found at {model_path}")
