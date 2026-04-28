@@ -102,6 +102,25 @@ class FaceDatabase:
             cursor = conn.execute(query, (year_str, month_str))
             return [{"name": row[0], "time": row[1], "status": row[2]} for row in cursor.fetchall()]
 
+    def get_attendance_logs_by_query(self, start_date: str, end_date: str, name: str = None):
+        """Fetches attendance logs for a specific date range, optionally filtered by name."""
+        with sqlite3.connect(self.db_path) as conn:
+            query = """
+                SELECT name, timestamp, status 
+                FROM attendance_logs 
+                WHERE date(timestamp) >= ? AND date(timestamp) <= ?
+            """
+            params = [start_date, end_date]
+            
+            if name and name != "All":
+                query += " AND name = ?"
+                params.append(name)
+                
+            query += " ORDER BY timestamp DESC"
+            
+            cursor = conn.execute(query, tuple(params))
+            return [{"name": row[0], "time": row[1], "status": row[2]} for row in cursor.fetchall()]
+
     def get_last_status(self, name):
         """Checks the most recent log for a specific user."""
         with sqlite3.connect(self.db_path) as conn:

@@ -293,17 +293,18 @@ async def get_attendance(admin_session: Optional[str] = Cookie(None)):
 
 @app.get("/download-attendance")
 async def download_attendance(
-    year: int,
-    month: int,
+    start_date: str,
+    end_date: str,
+    name: Optional[str] = None,
     admin_session: Optional[str] = Cookie(None)
 ):
     if admin_session != "authorized":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    logs = db.get_attendance_logs_for_month(year, month)
+    logs = db.get_attendance_logs_by_query(start_date, end_date, name)
 
     if not logs:
-        raise HTTPException(status_code=404, detail=f"No attendance data found for {year}-{month:02d}.")
+        raise HTTPException(status_code=404, detail=f"No attendance data found for the selected criteria.")
 
     df = pd.DataFrame(logs)
     df.rename(columns={'name': 'Name', 'time': 'Timestamp', 'status': 'Status'}, inplace=True)
@@ -324,7 +325,10 @@ async def download_attendance(
 
     output.seek(0)
 
-    filename = f"attendance_{year}_{month:02d}.xlsx"
+    filename = f"attendance_{start_date}_to_{end_date}.xlsx"
+    if name and name != "All":
+        filename = f"attendance_{name}_{start_date}_to_{end_date}.xlsx"
+
     headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
 
     return StreamingResponse(

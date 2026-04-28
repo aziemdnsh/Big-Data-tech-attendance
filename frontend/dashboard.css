@@ -146,7 +146,8 @@ td {
     flex-wrap: wrap;
 }
 
-#download-form select {
+#download-form select,
+#download-form input[type="date"] {
     padding: 8px 12px;
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -155,6 +156,12 @@ td {
     outline: none;
     cursor: pointer;
     font-family: inherit;
+}
+
+/* Make sure the calendar icon in date inputs isn't completely hidden */
+#download-form input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
 }
 
 /* Override .nav-btn for this specific form */
@@ -216,8 +223,14 @@ td {
     }
 
     #download-form select,
+    #download-form input[type="date"],
     #download-form .nav-btn {
         width: 100%;
         box-sizing: border-box;
+    }
+
+    #download-form span {
+        text-align: center;
+        width: 100%;
     }
 }

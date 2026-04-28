@@ -30,8 +30,12 @@
             <div class="download-section">
                 <h3>Export Attendance Report</h3>
                 <form id="download-form">
-                    <select id="month-select" name="month"></select>
-                    <select id="year-select" name="year"></select>
+                    <input type="date" id="start-date" name="start_date" required>
+                    <span style="color: white; margin: 0 10px;">to</span>
+                    <input type="date" id="end-date" name="end_date" required>
+                    <select id="name-select" name="name">
+                        <option value="All">All Staff</option>
+                    </select>
                     <button type="submit" class="nav-btn">Generate Excel</button>
                 </form>
                 <p id="download-error"></p>

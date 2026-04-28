@@ -10,48 +10,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function setupDownloadForm() {
-    const monthSelect = document.getElementById('month-select');
-    const yearSelect = document.getElementById('year-select');
+async function setupDownloadForm() {
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    const nameSelect = document.getElementById('name-select');
     const downloadForm = document.getElementById('download-form');
     const downloadError = document.getElementById('download-error');
 
-    if (!monthSelect || !yearSelect || !downloadForm || !downloadError) {
+    if (!startDateInput || !endDateInput || !nameSelect || !downloadForm || !downloadError) {
         console.warn("Download form elements not found in dashboard.html. Skipping download form setup.");
         return;
     }
 
-    // Populate months
-    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    months.forEach((month, index) => {
-        const option = document.createElement('option');
-        option.value = index + 1;
-        option.textContent = month;
-        monthSelect.appendChild(option);
-    });
+    // Set default dates (e.g., first day of current month to today)
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    // Format to YYYY-MM-DD
+    const formatDate = (date) => {
+        const d = new Date(date);
+        let month = '' + (d.getMonth() + 1);
+        let day = '' + d.getDate();
+        const year = d.getFullYear();
 
-    // Populate years (current year + last 4 years)
-    const currentYear = new Date().getFullYear();
-    for (let i = 0; i < 5; i++) {
-        const year = currentYear - i;
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        yearSelect.appendChild(option);
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+
+        return [year, month, day].join('-');
+    };
+
+    startDateInput.value = formatDate(firstDay);
+    endDateInput.value = formatDate(today);
+
+    // Populate names from backend
+    try {
+        const response = await fetch('/api/users');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.users) {
+                data.users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.name;
+                    option.textContent = user.name;
+                    nameSelect.appendChild(option);
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Failed to fetch users for dropdown:", err);
     }
-
-    // Set current month and year as default
-    const currentDate = new Date();
-    monthSelect.value = currentDate.getMonth() + 1;
-    yearSelect.value = currentDate.getFullYear();
 
     downloadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         downloadError.textContent = '';
 
-        const year = yearSelect.value;
-        const month = monthSelect.value;
-        const url = `/download-attendance?year=${year}&month=${month}`;
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const name = nameSelect.value;
+        
+        let url = `/download-attendance?start_date=${startDate}&end_date=${endDate}`;
+        if (name !== 'All') {
+            url += `&name=${encodeURIComponent(name)}`;
+        }
+        
         const submitButton = downloadForm.querySelector('button');
 
         try {
@@ -75,7 +96,11 @@ function setupDownloadForm() {
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = downloadUrl;
-            a.download = `attendance_${year}_${String(month).padStart(2, '0')}.xlsx`;
+            let filename = `attendance_${startDate}_to_${endDate}.xlsx`;
+            if (name !== 'All') {
+                filename = `attendance_${name}_${startDate}_to_${endDate}.xlsx`;
+            }
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(downloadUrl);
@@ -84,7 +109,7 @@ function setupDownloadForm() {
             console.error('Download failed:', error);
             downloadError.textContent = `Error: ${error.message}`;
         } finally {
-            submitButton.textContent = 'Download Excel';
+            submitButton.textContent = 'Generate Excel';
             submitButton.disabled = false;
         }
     });
