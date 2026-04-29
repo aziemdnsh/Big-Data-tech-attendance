@@ -3,9 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAttendanceLogs();
     setupDownloadForm();
     
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        // Clear the session cookie by setting expiry to the past
-        document.cookie = "admin_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try {
+            await fetch('/logout', { method: 'POST' });
+        } catch (e) {
+            console.error("Logout failed:", e);
+        }
         window.location.href = "/frontend/login.html";
     });
 });

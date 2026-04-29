@@ -1,26 +1,27 @@
 
 import math
+import os
+import io
+import smtplib
+from datetime import datetime, timedelta
+from email.mime.text import MIMEText
+from typing import Optional
+
 import numpy as np
 import cv2
-import os
-import socket
-import io
-import secrets
 import pandas as pd
+from scipy.spatial.distance import cosine
+
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Response, Cookie, Depends
+from fastapi.middleware.cors import CORSMiddleware  
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, StreamingResponse
+
+from database import FaceDatabase
 from utils.face_detector import FaceDetector
 from utils.face_embedder import FaceEmbedder
 from utils.antispoof import AntiSpoof
 from utils.liveness import LivenessDetector
-from fastapi.middleware.cors import CORSMiddleware  
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
-from database import FaceDatabase
-from scipy.spatial.distance import cosine
-from datetime import datetime, timedelta
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Response, Cookie, Depends
-from typing import Optional
-import smtplib
-from email.mime.text import MIMEText
 
 # Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
@@ -88,6 +89,24 @@ def is_in_office(user_lat, user_lon):
     print(f"User Distance: {distance:.2f}m") # Helpful for debugging
     return distance <= ALLOWED_RADIUS_METERS
 
+
+def send_email_notification(to_email: str, subject: str, body: str):
+    """Helper function to isolate SMTP configuration and email sending."""
+    SMTP_SERVER = "smtp.gmail.com"
+    SMTP_PORT = 587
+    SENDER_EMAIL = "your_email@gmail.com" 
+    SENDER_PASSWORD = "your_app_password" 
+    
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = to_email
+
+    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+    server.starttls()
+    server.login(SENDER_EMAIL, SENDER_PASSWORD)
+    server.send_message(msg)
+    server.quit()
 
 @app.post("/recognize")
 async def recognize(
@@ -183,6 +202,11 @@ async def login(response: Response, username: str = Form(...), password: str = F
         return {"success": True}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
+@app.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="admin_session", httponly=True)
+    return {"success": True}
+
 @app.post("/register")
 async def register(
     name: str = Form(...), 
@@ -226,26 +250,11 @@ async def send_warning(
     if admin_session != "authorized":
         raise HTTPException(status_code=401, detail="Admin access required")
     
-    # --- EMAIL CONFIGURATION ---
-    SMTP_SERVER = "smtp.gmail.com"
-    SMTP_PORT = 587
-    SENDER_EMAIL = "your_email@gmail.com" 
-    SENDER_PASSWORD = "your_app_password" 
-    
     subject = "Late Arrival Warning"
     body = f"Dear {name},\n\nThis is a formal warning regarding your late arrival recorded at {time}.\n\nPlease ensure you arrive on time in the future.\n\nManagement"
-    
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = SENDER_EMAIL
-    msg['To'] = email
 
     try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        send_email_notification(email, subject, body)
         return {"success": True, "message": "Warning email sent successfully!"}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -279,6 +288,13 @@ async def update_user(
 
 
 # ————— FRONTEND SERVING —————
+
+@app.get("/api/live-attendance")
+async def get_live_attendance():
+    """Public endpoint to show recent logs without exposing emails."""
+    logs = db.get_attendance_logs()
+    safe_logs = [{"name": log["name"], "time": log["time"], "status": log["status"]} for log in logs[:15]]
+    return {"success": True, "logs": safe_logs}
 
 if os.path.exists("frontend"):
     app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")

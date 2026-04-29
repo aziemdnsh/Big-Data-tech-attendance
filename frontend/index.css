@@ -18,7 +18,7 @@ body, html {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    width: 70vw;
     height: 100vh;
     z-index: 1; /* Lowest layer */
 }
@@ -32,9 +32,10 @@ body, html {
 
 /* UI Overlay Layer (Buttons/Text) */
 .interface-overlay {
-    position: relative;
+    position: fixed;
+    left: 0;
     z-index: 10; /* Sits on top of video */
-    width: 100%;
+    width: 70vw;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -83,6 +84,7 @@ h2 {
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: none; /* Hide the button for automatic capture */
 }
 
 #captureBtn:hover {
@@ -110,7 +112,7 @@ h2 {
     position: fixed;
     bottom: 0;
     left: 0;
-    width: 100%;
+    width: 70vw;
     padding: 15px 40px;
     background: rgba(0, 0, 0, 0.85); /* Darker glass effect */
     backdrop-filter: blur(10px);
@@ -149,10 +151,62 @@ h2 {
     100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
 }
 
+/* Live Attendance Sidebar */
+.attendance-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 30vw;
+    height: 100vh;
+    background: #111;
+    border-left: 2px solid #d4af37;
+    padding: 20px;
+    box-sizing: border-box;
+    color: white;
+    overflow-y: auto;
+    z-index: 20;
+}
+
+.attendance-sidebar h3 {
+    color: #d4af37;
+    text-align: center;
+    letter-spacing: 2px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.live-log-item {
+    background: rgba(255,255,255,0.05);
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+.status-in { background: rgba(76, 175, 80, 0.2); color: #4CAF50; }
+.status-out { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
+.status-late { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+
 /* =========================================
    MOBILE RESPONSIVENESS (PHONES & TABLETS)
    ========================================= */
 @media (max-width: 600px) {
+    .video-container, .interface-overlay, .kiosk-footer {
+        width: 100vw;
+    }
+    .attendance-sidebar {
+        display: none; /* Hide on small screens to keep camera visible */
+    }
     .interface-overlay {
         padding: 40px 20px 130px 20px; /* Pushes content up so the taller mobile footer doesn't block clicks */
     }
