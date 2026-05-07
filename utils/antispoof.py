@@ -21,7 +21,7 @@ try:
     from src.utility import parse_model_name  
     HAS_MINIVISION = True
 except ImportError as e:
-    print(f"⚠️ MiniVision import failed: {e}")
+    print(f"⚠️ MiniVision import failed: {e}")  
     HAS_MINIVISION = False
 
 
@@ -36,6 +36,7 @@ class AntiSpoof:
         
         if HAS_MINIVISION and os.path.exists(self.model_dir):
             original_dir = os.getcwd()  # ✅ Save current dir
+
             try:
                 import torch
                 device_id = 0 if use_gpu and torch.cuda.is_available() else -1

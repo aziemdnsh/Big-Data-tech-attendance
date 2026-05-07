@@ -22,12 +22,19 @@ from utils.face_detector import FaceDetector
 from utils.face_embedder import FaceEmbedder
 from utils.antispoof import AntiSpoof
 from utils.liveness import LivenessDetector
+from dotenv import load_dotenv
+load_dotenv()
 
 # Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 
 app = FastAPI()
-db = FaceDatabase()
+db = FaceDatabase(
+    host=os.getenv("MYSQL_HOST", "localhost"),
+    user=os.getenv("MYSQL_USER", "root"),
+    password=os.getenv("MYSQL_PASSWORD", "Danish@123"),
+    database=os.getenv("MYSQL_DB", "attendance_db")
+)
 
 # Enable CORS for frontend communication
 app.add_middleware(
@@ -44,58 +51,78 @@ embedder = FaceEmbedder()
 spoof = AntiSpoof()
 liveness = LivenessDetector()
 
-# Geofencing Configuration
-OFFICE_LAT = 2.982273
-OFFICE_LON = 101.661411
-ALLOWED_RADIUS_METERS = 50
-ALLOWED_PUBLIC_IP = "118.101.251.39" 
+# Geofencing Configuration - Main office is now just the default location
+MAIN_OFFICE_LOCATION = {
+    "name": "Main Office HQ",
+    "lat": 2.982273,
+    "lon": 101.661411,
+    "radius": 50
+}
+ALLOWED_PUBLIC_IP = "118.101.251.39"
+
+# For testing on mobile, you might need to disable this via an environment variable
+DISABLE_NETWORK_GATEKEEPER = os.getenv("DISABLE_NETWORK_GATEKEEPER", "false").lower() == "true"
 
 @app.middleware("http")
 async def network_gatekeeper(request: Request, call_next):
-    # Get the IP the server sees
+    if DISABLE_NETWORK_GATEKEEPER:
+        print("DEBUG: Network gatekeeper is DISABLED.")
+        return await call_next(request)
+
     client_ip = request.client.host
     print(f"DEBUG: Connection attempt from IP: {client_ip}") 
 
-    # 1. Always allow the machine itself
-    if client_ip in ["127.0.0.1", "localhost", "::1"]:
+    is_local = client_ip in ["127.0.0.1", "localhost", "::1"]
+    # Check for private IP ranges (e.g., 192.168.x.x, 10.x.x.x)
+    is_lan = client_ip.startswith("192.168.") or client_ip.startswith("10.") or (client_ip.startswith("172.") and 16 <= int(client_ip.split('.')[1]) <= 31)
+    is_allowed_public = client_ip == ALLOWED_PUBLIC_IP
+
+    if is_local or is_lan or is_allowed_public:
         return await call_next(request)
-
-    # 2. ONLY allow if it matches the BigData@5G Public IP
-    # If you are on a different Wi-Fi (like the iPhone hotspot), 
-    # your Public IP will change, and this will block you.
-    if client_ip != ALLOWED_PUBLIC_IP:
-        # Check if it's a local IP from a different network
-        # If you want to be EXTREMELY strict, remove the 'startswith' check below
-        if not client_ip.startswith("192.168.") and not client_ip.startswith("10.") and not client_ip.startswith("172."): 
-            raise HTTPException(
-                status_code=403, 
-                detail="FORBIDDEN: Unauthorized Network. Please connect to BigData@5G."
-            )
     
-    return await call_next(request)
+    # If not in any allowed category, deny access.
+    raise HTTPException(
+        status_code=403, 
+        detail=f"FORBIDDEN: Your IP ({client_ip}) is not authorized. Please connect to the correct network."
+    )
 
-def is_in_office(user_lat, user_lon):
-    """Calculates if the user is within the office radius using Haversine formula."""
-    R = 6371000  # Earth radius in meters
-    phi1 = math.radians(OFFICE_LAT)
-    phi2 = math.radians(user_lat)
-    dphi = math.radians(user_lat - OFFICE_LAT)
-    dlambda = math.radians(user_lon - OFFICE_LON)
-
-    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2) * math.sin(dlambda/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    distance = R * c
+def is_in_allowed_location(user_lat: float, user_lon: float):
+    """
+    Checks if the user is within the radius of the main office or any active on-site locations.
+    """
+    # 1. Get all active sites from the database
+    active_sites = db.get_active_sites()
     
-    print(f"User Distance: {distance:.2f}m") # Helpful for debugging
-    return distance <= ALLOWED_RADIUS_METERS
+    # 2. Add the main office to the list of locations to check
+    all_allowed_locations = [MAIN_OFFICE_LOCATION] + active_sites
+    
+    print(f"DEBUG: Checking against {len(all_allowed_locations)} allowed locations.")
 
+    # 3. Check user's location against each allowed area
+    for loc in all_allowed_locations:
+        R = 6371000  # Earth radius in meters
+        phi1 = math.radians(loc["lat"])
+        phi2 = math.radians(user_lat)
+        dphi = math.radians(user_lat - loc["lat"])
+        dlambda = math.radians(user_lon - loc["lon"])
+
+        a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2) * math.sin(dlambda/2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        distance = R * c
+        
+        print(f"DEBUG: Distance from '{loc['name']}': {distance:.2f}m. Required: <= {loc['radius']}m")
+        
+        if distance <= loc["radius"]:
+            return True # User is inside an allowed zone
+
+    return False # User is not in any allowed zone
 
 def send_email_notification(to_email: str, subject: str, body: str):
     """Helper function to isolate SMTP configuration and email sending."""
     SMTP_SERVER = "smtp.gmail.com"
     SMTP_PORT = 587
-    SENDER_EMAIL = "your_email@gmail.com" 
-    SENDER_PASSWORD = "your_app_password" 
+    SENDER_EMAIL = os.getenv("SENDER_EMAIL", "your_email@gmail.com")
+    SENDER_PASSWORD = os.getenv("SENDER_PASSWORD", "your_app_password")
     
     msg = MIMEText(body)
     msg['Subject'] = subject
@@ -114,12 +141,10 @@ async def recognize(
     lat: float = Form(...), 
     lon: float = Form(...)
 ):
-    known_faces = db.get_all_users()
-    print(f"Received Request - Location: {lat}, {lon}")
 
     # --- STEP 1: Geofence Check ---
-    if not is_in_office(lat, lon):
-        return {"success": False, "error": f"Access Denied: You are outside the office area."}
+    if not is_in_allowed_location(lat, lon):
+        return {"success": False, "error": f"Access Denied: You are outside the allowed office/site area."}
 
     # --- STEP 2: Process Image ---
     contents = await file.read()
@@ -160,9 +185,8 @@ async def recognize(
 
     # ————— TODO: Compare with database embeddings —————
     # Example: Check cosine similarity with stored vectors here
-
-    known_faces = db.get_all_users()
     
+    known_faces = db.get_all_users()
     if not known_faces:
         return {"success": False, "error": "Database is empty. Please register first."}
 
@@ -286,6 +310,58 @@ async def update_user(
     db.update_user(user_id, name, email, department)
     return {"success": True}
 
+
+# --- SITE MANAGEMENT API ---
+
+@app.get("/api/sites")
+async def get_sites(admin_session: Optional[str] = Cookie(None)):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return {"success": True, "sites": db.get_all_sites()}
+
+@app.post("/api/sites")
+async def add_site(
+    name: str = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    radius: int = Form(...),
+    admin_session: Optional[str] = Cookie(None)
+):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        db.add_site(name, latitude, longitude, radius)
+        return {"success": True, "message": "Site added successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/sites/{site_id}")
+async def update_site(
+    site_id: int,
+    name: str = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    radius: int = Form(...),
+    is_active: bool = Form(...),
+    admin_session: Optional[str] = Cookie(None)
+):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        db.update_site(site_id, name, latitude, longitude, radius, is_active)
+        return {"success": True, "message": "Site updated successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/sites/{site_id}")
+async def delete_site(site_id: int, admin_session: Optional[str] = Cookie(None)):
+    if admin_session != "authorized":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        db.delete_site(site_id)
+        return {"success": True, "message": "Site deleted successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ————— FRONTEND SERVING —————
 

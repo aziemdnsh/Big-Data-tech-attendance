@@ -77,6 +77,35 @@
             </table>
         </div>
     </div>
+
+    <!-- Site Management Card -->
+    <div class="staff-management-card">
+        <h3>On-Site Locations</h3>
+        
+        <div class="add-site-form" style="padding: 15px; background: rgba(255,255,255,0.03); border-radius: 5px; margin-bottom: 15px;">
+            <input type="text" id="siteName" placeholder="Site Name (e.g., Project X)" class="modal-input">
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <input type="number" id="siteLat" placeholder="Latitude" class="modal-input" step="any">
+                <input type="number" id="siteLon" placeholder="Longitude" class="modal-input" step="any">
+            </div>
+            <input type="number" id="siteRadius" placeholder="Radius (meters)" class="modal-input" style="margin-top: 10px;">
+            <button id="addSiteBtn" class="modal-btn-save" style="width: 100%; margin-top: 10px;">Add New Site</button>
+            <p id="siteStatus" style="font-size: 12px; text-align: center; margin-top: 10px; min-height: 1em;"></p>
+        </div>
+
+        <div class="staff-table-container">
+            <table class="staff-table">
+                <thead>
+                    <tr>
+                        <th>Site Name</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="sitesTableBody"></tbody>
+            </table>
+        </div>
+    </div>
     </div>
 
     <canvas id="canvas"></canvas>
@@ -92,6 +121,26 @@
             <div class="modal-actions">
                 <button onclick="closeModal()" class="modal-btn-cancel">Cancel</button>
                 <button onclick="submitEdit()" class="modal-btn-save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Site Modal -->
+    <div id="editSiteModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3>Edit On-Site Location</h3>
+            <input type="hidden" id="editSiteId">
+            <input type="text" id="editSiteName" placeholder="Site Name" class="modal-input">
+            <input type="number" id="editSiteLat" placeholder="Latitude" class="modal-input" step="any">
+            <input type="number" id="editSiteLon" placeholder="Longitude" class="modal-input" step="any">
+            <input type="number" id="editSiteRadius" placeholder="Radius (meters)" class="modal-input">
+            <div class="modal-checkbox-container" style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="editSiteActive" style="width: auto;">
+                <label for="editSiteActive" style="color: white; font-size: 14px;">Is Active</label>
+            </div>
+            <div class="modal-actions">
+                <button onclick="closeSiteModal()" class="modal-btn-cancel">Cancel</button>
+                <button onclick="submitSiteEdit()" class="modal-btn-save">Save Changes</button>
             </div>
         </div>
     </div>
